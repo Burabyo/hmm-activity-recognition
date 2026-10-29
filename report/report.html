@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HMM Activity Report</title>
+<style>
+  @page { size: A4; margin: 16mm 17mm 15mm 17mm; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10pt; line-height: 1.38; color: #1d1d1f; }
+  h1 { font-size: 16pt; margin: 0 0 2px; }
+  .sub { color: #555; font-size: 9.5pt; margin-bottom: 10px; }
+  h2 { font-size: 12pt; margin: 14px 0 5px; padding-bottom: 2px; border-bottom: 1.5px solid #C44E52; }
+  h3 { font-size: 10.5pt; margin: 9px 0 3px; }
+  p { margin: 4px 0 6px; text-align: justify; }
+  ul { margin: 3px 0 6px; padding-left: 18px; }
+  li { margin: 1px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 5px 0 7px; font-size: 9pt; }
+  th, td { border: 1px solid #c8c8c8; padding: 3px 6px; text-align: left; }
+  th { background: #f1f1f3; }
+  td.n { text-align: center; }
+  figure { margin: 6px 0 8px; text-align: center; page-break-inside: avoid; }
+  figure img { max-width: 100%; }
+  figcaption { font-size: 8.6pt; color: #444; margin-top: 2px; }
+  a { color: #1a5fb4; text-decoration: none; word-break: break-all; }
+  .two { display: flex; gap: 10px; }
+  .two > * { flex: 1; }
+  .avoid { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<h1>Modelling Human Activity States Using Hidden Markov Models</h1>
+<div class="sub">Jolly Gift Burabyo &nbsp;·&nbsp; Formative 2 – Hidden Markov Models &nbsp;·&nbsp; 29 October 2026 &nbsp;·&nbsp;
+Code &amp; data: <a href="https://github.com/Burabyo/hmm-activity-recognition">github.com/Burabyo/hmm-activity-recognition</a></div>
+
+<h2>1. Background and motivation</h2>
+<p>Students often spend long, unbroken hours studying, which is linked to poor posture, fatigue and reduced concentration.
+Our use case is a <b>phone-based activity monitor for students</b> that detects prolonged inactivity (the phone lying
+<i>still</i> on a desk, or the student <i>standing</i> idle) and nudges them to move, while recognising real activity
+(<i>walking</i>, <i>jumping</i>/exercise) so it does not interrupt genuine breaks. The true activity is never observed
+directly; only noisy accelerometer and gyroscope readings are. A Hidden Markov Model fits this problem: it treats the
+activity as a hidden state that evolves over time and links it probabilistically to the sensor features, so it can
+infer a temporally consistent activity timeline from the sensor stream.</p>
+
+<h2>2. Data collection and pre-processing</h2>
+<table>
+<tr><th>Participant / device</th><td>Jolly Gift Burabyo · iPhone 11 Pro (iOS) · Sensor Logger v1.68</td></tr>
+<tr><th>Sensors</th><td>Accelerometer (x, y, z), Gyroscope (x, y, z), plus Gravity (used to rebuild the raw accelerometer)</td></tr>
+<tr><th>Sampling rate</th><td>Set to <b>100 Hz</b>; measured from timestamps: <b>99.3 Hz</b> (Δt = 10.07 ms) on every file</td></tr>
+<tr><th>Training data</th><td><b>52 files</b>: 13 clips × 4 activities, ~10 s each (bedroom). After cleaning: still 111 s, standing 110 s, walking 114 s, jumping 117 s (all &gt; 1 min 30 s)</td></tr>
+<tr><th>Unseen test data</th><td>2 continuous recordings (41 s and 44 s) made later in a <b>different room (living room)</b>, each containing several activities in sequence</td></tr>
+</table>
+
+<p><b>Videos of data collection</b> (full body, face visible, phone recording in hand):
+Standing – <a href="https://drive.google.com/file/d/1yA_DP3qB3pFlJeSCUPvisG_z1yE_k0aB/view?usp=sharing">link</a> ·
+Walking – <a href="https://drive.google.com/file/d/1Vyu1zIJ2cXOFrPhvDf8uZc9PPhVjlmmy/view?usp=sharing">link</a> ·
+Jumping – <a href="https://drive.google.com/file/d/1cam80EsMgi6tWBkMEZ8WwPjal0GsLBZj/view?usp=sharing">link</a> ·
+Still – <a href="https://drive.google.com/file/d/12Muhzl1npKDIN6ipxp3qi3YnDbDqRG-c/view?usp=sharing">link</a></p>
+
+<h3>Pre-processing</h3>
+<ul>
+<li><b>Raw accelerometer:</b> Sensor Logger's <i>Accelerometer</i> stream is linear acceleration (gravity removed), so the
+<i>Gravity</i> stream was added back. This keeps phone orientation (flat on a table vs. held upright), which helps separate <i>still</i> from <i>standing</i>.</li>
+<li><b>Sampling-rate harmonisation:</b> iOS delivered 99.3 Hz rather than the nominal 100 Hz. All streams were aligned on
+<code>seconds_elapsed</code> and linearly interpolated onto an exact <b>100 Hz grid</b>. Any phone (e.g. a 50 Hz or 200 Hz
+Android) can be resampled onto the same grid before windowing, so windows always contain the same number of samples.</li>
+<li><b>Cleaning:</b> the first and last 1 s of each training clip were trimmed to remove button presses. In the test files,
+moments of handling the phone (picking it up or putting it down) are labelled <i>transition</i>: they are decoded but not scored.</li>
+<li><b>Windowing:</b> <b>2 s windows (200 samples) with 50 % overlap (1 s hop)</b>. Walking and jumping run at about 2 Hz, so each
+window holds about 4 full motion cycles. The FFT resolution is 100/200 = 0.5 Hz (zero-padded to 1024 points for the peak
+estimate). A 1 s hop gives one HMM observation per second. This produced 373 training windows (91–97 per activity).</li>
+</ul>
+
+<figure><img src="../figures/fig2_raw_signals.png" style="width:60%">
+<figcaption>Figure 1 – One clip per activity (raw accelerometer and gyroscope after resampling to 100 Hz). Amplitude and rhythm differ clearly between activities.</figcaption></figure>
+
+<h2>3. HMM setup and implementation</h2>
+<p><b>Features (8 per window)</b>, computed on the magnitudes <i>a</i>=‖acc‖ and <i>ω</i>=‖gyro‖:</p>
+<table>
+<tr><th>Time domain</th><td><b>acc_std</b> (motion intensity) · <b>acc_sma</b> (signal magnitude area, total dynamic acceleration) ·
+<b>gyro_mean</b> (rotation: zero on the table, small tremor when hand-held) · <b>tilt</b> (phone orientation relative to gravity) · <b>corr_yz</b> (axis coupling during vertical bouncing)</td></tr>
+<tr><th>Frequency domain (FFT)</th><td><b>dom_freq</b> (step/jump rhythm ~1.6–2 Hz) · <b>spec_energy</b> (0.5–20 Hz power) ·
+<b>spec_entropy</b> (peaked spectrum for rhythmic motion vs. flat spectrum for noise)</td></tr>
+<tr><th>Normalisation</th><td>The intensity features span several orders of magnitude, so they were log<sub>10</sub>-transformed first to make them
+roughly Gaussian. All features were then <b>Z-scored</b> using the training-set mean and standard deviation only (re-used on the test set, so no leakage). This puts every
+feature on the same scale for the Gaussian emissions.</td></tr>
+</table>
+
+<table>
+<tr><th>Hidden states Z</th><td>still, standing, walking, jumping (K = 4), one state per 1-s step</td></tr>
+<tr><th>Observations X</th><td>the 8-dimensional Z-scored feature vector of each window</td></tr>
+<tr><th>Transitions A</th><td>4×4 matrix, A<sub>ij</sub> = P(z<sub>t+1</sub>=j | z<sub>t</sub>=i), learned by Baum–Welch</td></tr>
+<tr><th>Emissions B</th><td>one diagonal-covariance Gaussian per state, 𝒩(x; μ<sub>k</sub>, σ²<sub>k</sub>) (continuous observations)</td></tr>
+<tr><th>Initial π</th><td>uniform: we make no assumption about the activity at the start of a recording</td></tr>
+</table>
+
+<p><b>Algorithms.</b> <b>Baum–Welch (EM)</b> learns A, μ and σ² from the data. Its E-step is a <i>scaled</i> forward–backward pass,
+which avoids numerical underflow. It stops when the log-likelihood gain per observation drops below ε = 10<sup>-4</sup>.
+<b>Viterbi</b> (computed in log space) then decodes the single most likely activity sequence. This suits our metrics:
+sensitivity, specificity and accuracy all need one hard label per window, and the transition model discourages
+isolated label flips. Everything is implemented from scratch in NumPy. The implementation was first validated on synthetic
+data: the log-likelihood increased monotonically, A was recovered to within 0.04, and the Viterbi path was 99.5 % correct.</p>
+
+<p><b>Training.</b> Each training clip contains only one activity, so on its own it holds no information about transitions.
+The clips' window sequences were therefore chained into pseudo-continuous sessions that follow a plausible routine
+(still → standing → walking → jumping → walking → standing). The remaining clips were added as separate sequences.
+A pseudo-count of 0.1 keeps every transition possible. The emissions were initialised from the labelled windows,
+and Baum–Welch converged in <b>2 iterations</b> because the classes are well separated. As a robustness check, we also ran Baum–Welch
+<b>without labels</b>, starting from k-means clusters. It converged in 3 iterations, rediscovered all four activities (100 % agreement on the training data) and
+reached 86.3 % on the test data.</p>
+
+<div class="two avoid">
+<figure><img src="../figures/fig5_transition_matrix.png">
+<figcaption>Figure 2 – Learned transition matrix (left) and its off-diagonal entries (right).</figcaption></figure>
+</div>
+<figure class="avoid"><img src="../figures/fig6_emissions.png" style="width:85%">
+<figcaption>Figure 3 – Emission model: learned feature means per state (top) and Gaussian emission densities for four key features (bottom).</figcaption></figure>
+
+<h2>4. Results and interpretation</h2>
+<p>The model was evaluated on the 2 unseen living-room recordings: 80 scored windows, with 3 windows of phone handling excluded.
+The metrics are one-vs-rest per state. "Number of Samples" is the number of 1-s windows.</p>
+<table class="avoid">
+<tr><th>State (Activity)</th><th>Number of Samples</th><th>Sensitivity</th><th>Specificity</th><th>Overall Accuracy</th></tr>
+<tr><td>Still</td><td class="n">15</td><td class="n">0.867</td><td class="n">1.000</td><td class="n" rowspan="4"><b>0.862</b><br><span style="font-size:8pt">(per-state one-vs-rest: 0.975 / 0.925 / 0.875 / 0.950)</span></td></tr>
+<tr><td>Standing</td><td class="n">18</td><td class="n">0.722</td><td class="n">0.984</td></tr>
+<tr><td>Walking</td><td class="n">29</td><td class="n">0.862</td><td class="n">0.882</td></tr>
+<tr><td>Jumping</td><td class="n">18</td><td class="n">1.000</td><td class="n">0.935</td></tr>
+</table>
+
+<div class="two avoid">
+<figure style="flex:0.9"><img src="../figures/fig7_confusion_matrix.png">
+<figcaption>Figure 4 – Confusion matrix on unseen test data (counts and row-normalised).</figcaption></figure>
+</div>
+<figure class="avoid"><img src="../figures/fig8_decoded_sequences.png" style="width:68%">
+<figcaption>Figure 5 – Unseen recordings: signal, ground truth vs. Viterbi-decoded activity, and posterior state probabilities.</figcaption></figure>
+
+<p>Accuracy was <b>89.7 %</b> on test_01 and <b>82.9 %</b> on test_02. Jumping was never missed (sensitivity 1.0), and still was never
+predicted wrongly (specificity 1.0). Most errors fall in <b>boundary windows</b>: a 2-s window that straddles a switch
+contains two activities. In test_01, for example, the 2 s after picking the phone up are still "settling" movement and decode as walking.
+The largest single error is the <b>first 4 s of test_02</b>, where walking was labelled jumping. In that segment the phone was held noticeably
+more tilted (gravity on the z-axis −7.7 m/s² vs. −9.6 m/s² in training), and the learned <i>tilt</i> mean is highest for jumping
+(Figure 3). The orientation feature therefore outweighed the intensity features.</p>
+
+<h2>5. Discussion and conclusion</h2>
+<ul>
+<li><b>Easiest vs. hardest.</b> <i>Jumping</i> and <i>still</i> were the easiest: their intensity and rotation features lie at
+opposite extremes (Figure 3), several standard deviations from the other classes. <i>Standing</i> was the hardest (sensitivity 0.72). Its signal is only small hand tremor,
+so whenever the user shifts the phone, it looks like the start of walking.</li>
+<li><b>Transition probabilities.</b> The self-transitions of 0.87–0.93 imply average bouts of 8–14 s, matching how
+long each activity was actually performed. The only sizeable off-diagonal entries are physically realistic
+moves: still ↔ standing (picking up or putting down the phone), standing ↔ walking, and walking ↔ jumping. Still → jumping is
+≈ 0.001: nobody jumps straight from a phone lying on a table.</li>
+<li><b>Noise and sampling rate.</b> At 100 Hz the signal is heavily oversampled, since human motion lies below 20 Hz, so the slight
+jitter (99.3 Hz) had no visible effect once the data was resampled. Sensor noise mainly affects the low-motion classes: their dominant frequency is
+pure noise, which gives broad, overlapping emissions (Figure 3). The very clean training clips also produced very narrow
+emission variances, which makes the model over-confident on unseen data. An emission-only classifier reached the same 86.2 %,
+meaning the emissions dominated the transition prior in this experiment.</li>
+<li><b>Generalisation.</b> Moving to a different room and a more natural way of holding the phone cost about 14 % accuracy
+compared with training (100 %). The model generalises well for the four activities themselves, but less well at transitions
+and under changes in phone orientation.</li>
+<li><b>Improvements.</b> (1) Collect more varied training data (different grips, pockets, rooms, and more participants), including real
+continuous sessions, so A is learned from genuine transitions. (2) Make features less sensitive to how the phone is held, or drop the raw
+<i>tilt</i> feature. (3) Use a larger variance floor or full covariances to avoid over-confident emissions. (4) Add sensors
+(barometer for stairs, magnetometer for heading) and a <i>transition</i> state for phone handling.</li>
+</ul>
+<p><b>Conclusion.</b> A Gaussian HMM implemented from scratch, with Baum–Welch training and Viterbi decoding, recognised four activities
+from a phone's motion sensors with <b>86 % accuracy on unseen recordings from a new environment</b>. It learned a transition structure that
+reflects realistic behaviour. This makes it a practical basis for the study-break monitor, which mainly needs to separate "inactive" (still/standing) from
+"active" (walking/jumping) reliably.</p>
+
+</body>
+</html>

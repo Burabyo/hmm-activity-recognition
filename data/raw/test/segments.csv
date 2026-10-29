@@ -1,0 +1,10 @@
+file,activity,start_s,end_s
+test_01,still,0.0,11.0
+test_01,standing,13.0,21.0
+test_01,walking,21.0,32.0
+test_01,jumping,32.0,41.3
+test_02,walking,0.0,9.5
+test_02,jumping,9.5,18.0
+test_02,walking,18.0,29.0
+test_02,standing,29.0,37.0
+test_02,still,39.5,44.4

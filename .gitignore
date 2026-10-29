@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+videos/*.mov
+videos/*.mp4
+ingest.py
+build_notebook.py
