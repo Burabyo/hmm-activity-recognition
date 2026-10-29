@@ -6,3 +6,4 @@ videos/*.mov
 videos/*.mp4
 ingest.py
 build_notebook.py
+report/html_to_docx.py
