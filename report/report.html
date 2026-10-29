@@ -8,7 +8,7 @@
   body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10pt; line-height: 1.38; color: #1d1d1f; }
   h1 { font-size: 16pt; margin: 0 0 2px; }
   .sub { color: #555; font-size: 9.5pt; margin-bottom: 10px; }
-  h2 { font-size: 12pt; margin: 14px 0 5px; padding-bottom: 2px; border-bottom: 1.5px solid #C44E52; }
+  h2 { font-size: 12pt; margin: 14px 0 5px; }
   h3 { font-size: 10.5pt; margin: 9px 0 3px; }
   p { margin: 4px 0 6px; text-align: justify; }
   ul { margin: 3px 0 6px; padding-left: 18px; }
@@ -30,7 +30,7 @@
 
 <h1>Modelling Human Activity States Using Hidden Markov Models</h1>
 <div class="sub">Jolly Gift Burabyo &nbsp;·&nbsp; Formative 2 – Hidden Markov Models &nbsp;·&nbsp; 29 October 2026 &nbsp;·&nbsp;
-Code &amp; data: <a href="https://github.com/Burabyo/hmm-activity-recognition">github.com/Burabyo/hmm-activity-recognition</a></div>
+Code &amp; data: <a href="https://github.com/Burabyo/hmm-activity-recognition">https://github.com/Burabyo/hmm-activity-recognition</a></div>
 
 <h2>1. Background and motivation</h2>
 <p>Students often spend long, unbroken hours studying, which is linked to poor posture, fatigue and reduced concentration.
@@ -50,11 +50,8 @@ infer a temporally consistent activity timeline from the sensor stream.</p>
 <tr><th>Unseen test data</th><td>2 continuous recordings (41 s and 44 s) made later in a <b>different room (living room)</b>, each containing several activities in sequence</td></tr>
 </table>
 
-<p><b>Videos of data collection</b> (full body, face visible, phone recording in hand):
-Standing – <a href="https://drive.google.com/file/d/1yA_DP3qB3pFlJeSCUPvisG_z1yE_k0aB/view?usp=sharing">link</a> ·
-Walking – <a href="https://drive.google.com/file/d/1Vyu1zIJ2cXOFrPhvDf8uZc9PPhVjlmmy/view?usp=sharing">link</a> ·
-Jumping – <a href="https://drive.google.com/file/d/1cam80EsMgi6tWBkMEZ8WwPjal0GsLBZj/view?usp=sharing">link</a> ·
-Still – <a href="https://drive.google.com/file/d/12Muhzl1npKDIN6ipxp3qi3YnDbDqRG-c/view?usp=sharing">link</a></p>
+<p style="margin-bottom:2px"><b>Videos of data collection</b> (full body, face visible, phone recording in hand):</p>
+<table><tr><th style="width:18%">Activity</th><th>Video link</th></tr><tr><td>Standing</td><td><a href="https://drive.google.com/file/d/1yA_DP3qB3pFlJeSCUPvisG_z1yE_k0aB/view?usp=sharing">https://drive.google.com/file/d/1yA_DP3qB3pFlJeSCUPvisG_z1yE_k0aB/view?usp=sharing</a></td></tr><tr><td>Walking</td><td><a href="https://drive.google.com/file/d/1Vyu1zIJ2cXOFrPhvDf8uZc9PPhVjlmmy/view?usp=sharing">https://drive.google.com/file/d/1Vyu1zIJ2cXOFrPhvDf8uZc9PPhVjlmmy/view?usp=sharing</a></td></tr><tr><td>Jumping</td><td><a href="https://drive.google.com/file/d/1cam80EsMgi6tWBkMEZ8WwPjal0GsLBZj/view?usp=sharing">https://drive.google.com/file/d/1cam80EsMgi6tWBkMEZ8WwPjal0GsLBZj/view?usp=sharing</a></td></tr><tr><td>Still</td><td><a href="https://drive.google.com/file/d/12Muhzl1npKDIN6ipxp3qi3YnDbDqRG-c/view?usp=sharing">https://drive.google.com/file/d/12Muhzl1npKDIN6ipxp3qi3YnDbDqRG-c/view?usp=sharing</a></td></tr></table>
 
 <h3>Pre-processing</h3>
 <ul>
