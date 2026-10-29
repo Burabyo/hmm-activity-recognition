@@ -34,7 +34,7 @@ Code &amp; data: <a href="https://github.com/Burabyo/hmm-activity-recognition">h
 
 <h2>1. Background and motivation</h2>
 <p>Students often spend long, unbroken hours studying, which is linked to poor posture, fatigue and reduced concentration.
-Our use case is a <b>phone-based activity monitor for students</b> that detects prolonged inactivity (the phone lying
+My use case is a <b>phone-based activity monitor for students</b> that detects prolonged inactivity (the phone lying
 <i>still</i> on a desk, or the student <i>standing</i> idle) and nudges them to move, while recognising real activity
 (<i>walking</i>, <i>jumping</i>/exercise) so it does not interrupt genuine breaks. The true activity is never observed
 directly; only noisy accelerometer and gyroscope readings are. A Hidden Markov Model fits this problem: it treats the
@@ -70,7 +70,7 @@ estimate). A 1 s hop gives one HMM observation per second. This produced 373 tra
 <figure><img src="../figures/fig2_raw_signals.png" style="width:60%">
 <figcaption>Figure 1 – One clip per activity (raw accelerometer and gyroscope after resampling to 100 Hz). Amplitude and rhythm differ clearly between activities.</figcaption></figure>
 
-<h2>3. HMM setup and implementation</h2>
+<h2>3. HMM setup and implementation details</h2>
 <p><b>Features (8 per window)</b>, computed on the magnitudes <i>a</i>=‖acc‖ and <i>ω</i>=‖gyro‖:</p>
 <table>
 <tr><th>Time domain</th><td><b>acc_std</b> (motion intensity) · <b>acc_sma</b> (signal magnitude area, total dynamic acceleration) ·
@@ -87,12 +87,12 @@ feature on the same scale for the Gaussian emissions.</td></tr>
 <tr><th>Observations X</th><td>the 8-dimensional Z-scored feature vector of each window</td></tr>
 <tr><th>Transitions A</th><td>4×4 matrix, A<sub>ij</sub> = P(z<sub>t+1</sub>=j | z<sub>t</sub>=i), learned by Baum–Welch</td></tr>
 <tr><th>Emissions B</th><td>one diagonal-covariance Gaussian per state, 𝒩(x; μ<sub>k</sub>, σ²<sub>k</sub>) (continuous observations)</td></tr>
-<tr><th>Initial π</th><td>uniform: we make no assumption about the activity at the start of a recording</td></tr>
+<tr><th>Initial π</th><td>uniform: I make no assumption about the activity at the start of a recording</td></tr>
 </table>
 
 <p><b>Algorithms.</b> <b>Baum–Welch (EM)</b> learns A, μ and σ² from the data. Its E-step is a <i>scaled</i> forward–backward pass,
 which avoids numerical underflow. It stops when the log-likelihood gain per observation drops below ε = 10<sup>-4</sup>.
-<b>Viterbi</b> (computed in log space) then decodes the single most likely activity sequence. This suits our metrics:
+<b>Viterbi</b> (computed in log space) then decodes the single most likely activity sequence. This suits my evaluation metrics:
 sensitivity, specificity and accuracy all need one hard label per window, and the transition model discourages
 isolated label flips. Everything is implemented from scratch in NumPy. The implementation was first validated on synthetic
 data: the log-likelihood increased monotonically, A was recovered to within 0.04, and the Viterbi path was 99.5 % correct.</p>
@@ -101,7 +101,7 @@ data: the log-likelihood increased monotonically, A was recovered to within 0.04
 The clips' window sequences were therefore chained into pseudo-continuous sessions that follow a plausible routine
 (still → standing → walking → jumping → walking → standing). The remaining clips were added as separate sequences.
 A pseudo-count of 0.1 keeps every transition possible. The emissions were initialised from the labelled windows,
-and Baum–Welch converged in <b>2 iterations</b> because the classes are well separated. As a robustness check, we also ran Baum–Welch
+and Baum–Welch converged in <b>2 iterations</b> because the classes are well separated. As a robustness check, I also ran Baum–Welch
 <b>without labels</b>, starting from k-means clusters. It converged in 3 iterations, rediscovered all four activities (100 % agreement on the training data) and
 reached 86.3 % on the test data.</p>
 
@@ -151,9 +151,11 @@ jitter (99.3 Hz) had no visible effect once the data was resampled. Sensor noise
 pure noise, which gives broad, overlapping emissions (Figure 3). The very clean training clips also produced very narrow
 emission variances, which makes the model over-confident on unseen data. An emission-only classifier reached the same 86.2 %,
 meaning the emissions dominated the transition prior in this experiment.</li>
-<li><b>Generalisation.</b> Moving to a different room and a more natural way of holding the phone cost about 14 % accuracy
-compared with training (100 %). The model generalises well for the four activities themselves, but less well at transitions
-and under changes in phone orientation.</li>
+<li><b>Generalisation (personal reflection).</b> Testing in my living room instead of my bedroom cost about 14 % accuracy
+compared with training (100 %). Watching the decoded plots, I realised the errors come from my own behaviour more than from the model:
+when recording the tests I moved naturally, held the phone more tilted while walking, and took a second or two to settle after picking
+the phone up. My training clips were "too perfect" (one activity, same grip, same room). The model therefore generalises well to the
+activities themselves, but less well to transitions and to changes in how the phone is held.</li>
 <li><b>Improvements.</b> (1) Collect more varied training data (different grips, pockets, rooms, and more participants), including real
 continuous sessions, so A is learned from genuine transitions. (2) Make features less sensitive to how the phone is held, or drop the raw
 <i>tilt</i> feature. (3) Use a larger variance floor or full covariances to avoid over-confident emissions. (4) Add sensors
